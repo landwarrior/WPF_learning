@@ -1,0 +1,148 @@
+<UserControl x:Class="WpfLearning.Views.WasteListView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:models="clr-namespace:WpfLearning.Models"
+             xmlns:vm="clr-namespace:WpfLearning.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:WasteListViewModel, IsDesignTimeCreatable=False}">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <DockPanel Margin="0,0,0,12">
+            <Button DockPanel.Dock="Right"
+                    Content="再読込"
+                    Command="{Binding ReloadCommand}"
+                    Style="{StaticResource SecondaryButton}"/>
+            <TextBlock VerticalAlignment="Center"
+                       Foreground="{StaticResource MutedTextBrush}"
+                       Text="{Binding RecordCountText}"/>
+        </DockPanel>
+
+        <DataGrid Grid.Row="1"
+                  ItemsSource="{Binding Records}"
+                  SelectedItem="{Binding SelectedRecord, Mode=TwoWay}">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="収集日"
+                                    Width="110"
+                                    Binding="{Binding CollectedOn, StringFormat=yyyy/MM/dd}"/>
+                <DataGridTextColumn Header="マニフェスト番号" Width="140" Binding="{Binding ManifestNumber}"/>
+                <DataGridTextColumn Header="排出事業者" Width="*" Binding="{Binding GeneratorName}"/>
+                <DataGridTextColumn Header="廃棄物の種類" Width="180" Binding="{Binding WasteName}"/>
+                <DataGridTextColumn Header="数量" Width="100" Binding="{Binding QuantityDisplay}"/>
+                <DataGridTextColumn Header="処分方法" Width="100" Binding="{Binding DisposalMethod}"/>
+                <DataGridTextColumn Header="画像" Width="70" Binding="{Binding ImageCount}"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <Grid Grid.Row="2" Margin="0,16,0,0">
+            <TextBlock Foreground="{StaticResource MutedTextBrush}"
+                       Text="行を選択すると、その記録の詳細がここに表示されます。">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding SelectedRecord}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+
+            <Border Padding="16"
+                    Background="White"
+                    BorderBrush="{StaticResource CardBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="12">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Visibility" Value="Visible"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding SelectedRecord}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <ContentControl Grid.Row="0" Content="{Binding SelectedRecord}">
+                        <ContentControl.ContentTemplate>
+                            <DataTemplate DataType="{x:Type models:WasteRecord}">
+                                <StackPanel>
+                                    <TextBlock FontSize="18" FontWeight="SemiBold" Text="{Binding GeneratorName}"/>
+                                    <TextBlock Margin="0,6,0,0" Foreground="#374151">
+                                        <Run Text="{Binding CollectedOn, Mode=OneWay, StringFormat=yyyy/MM/dd}"/>
+                                        <Run Text=" · "/>
+                                        <Run Text="{Binding WasteName, Mode=OneWay}"/>
+                                        <Run Text=" · "/>
+                                        <Run Text="{Binding QuantityDisplay, Mode=OneWay}"/>
+                                        <Run Text=" · "/>
+                                        <Run Text="{Binding DisposalMethod, Mode=OneWay}"/>
+                                    </TextBlock>
+                                    <TextBlock Margin="0,6,0,0"
+                                               Foreground="#4B5563"
+                                               Text="{Binding ManifestDisplay}"/>
+                                    <TextBlock Margin="0,8,0,0"
+                                               TextWrapping="Wrap"
+                                               Foreground="#4B5563"
+                                               Text="{Binding Notes}"/>
+                                    <TextBlock Margin="0,8,0,0"
+                                               Foreground="{StaticResource MutedTextBrush}"
+                                               FontSize="12"
+                                               Text="{Binding RegisteredAt, StringFormat=登録日時 yyyy/MM/dd HH:mm}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ContentControl.ContentTemplate>
+                    </ContentControl>
+                    <ItemsControl Grid.Row="1" ItemsSource="{Binding SelectedImagePreviews}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Margin="0,12,8,0"
+                                        Command="{Binding OpenCommand}"
+                                        Style="{StaticResource ImageButton}"
+                                        ToolTip="拡大表示">
+                                    <Border CornerRadius="6"
+                                            BorderBrush="{StaticResource CardBorderBrush}"
+                                            BorderThickness="1"
+                                            ClipToBounds="True">
+                                        <Viewbox MaxWidth="160" MaxHeight="120" Stretch="Uniform">
+                                            <Image Source="{Binding Thumbnail}" Stretch="None"/>
+                                        </Viewbox>
+                                    </Border>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Top">
+                        <Button Content="この記録を編集"
+                                Command="{Binding EditCommand}"
+                                Style="{StaticResource PrimaryButton}"/>
+                        <Button Margin="0,8,0,0"
+                                Content="この記録を削除"
+                                Command="{Binding DeleteCommand}"
+                                Style="{StaticResource DangerButton}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

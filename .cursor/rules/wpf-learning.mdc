@@ -1,0 +1,29 @@
+---
+description: WPF 学習アプリで、利用者が確定した方針
+alwaysApply: true
+---
+
+# WPF 学習アプリの方針
+
+このリポジトリは、WPF の画面構成とデータ登録を確認するための学習用アプリである。題材は収集記録の一覧と登録である。
+
+## 利用者が確定したこと
+
+- 対象は .NET 10。 .NET 8 は EOL のため使わない。
+- 配布は `publish\WpfLearning.exe` の 1 ファイルだけ。受け取り側に SDK や .NET の実行環境をインストールさせない。`bin` 配下の exe だけを渡す形に戻さない。
+- 保存は SQLite。登録と削除は行単位。平文 JSON や、ファイル全体を暗号化して書き直す `.dat` には戻さない。
+- データベースは SQLCipher で暗号化する。鍵は DPAPI の `DataProtectionScope.CurrentUser` で、ローカルアカウントでも使えるようにする。Microsoft アカウントは前提にしない。
+- 鍵ファイルとデータベースを別の Windows ユーザーや別 PC へコピーしても、データベースを開けてはいけない。
+- 画面は MVVM。`MainWindow` の `ContentControl` と `App.xaml` の `DataTemplate` で切り替える。新しい画面は ViewModel、UserControl、DataTemplate を 1 組で足す。入力とボタンの処理をコードビハインドへ書かない。
+- 編集は一覧から同じ登録画面で行い、既存の行を更新する。カメラで撮影した画像は、記録の行としてデータベースに保存する。
+- 説明と UI 文言は日本語。起動方法、保存場所、暗号化の動作を変えたら `README.md` も更新する。
+
+## この PC でのビルド
+
+`dotnet` は `C:\Program Files\dotnet` の .NET 10 SDK を使う。
+
+```powershell
+dotnet publish "WpfLearning" -c Release -o "publish"
+```
+
+利用者の `waste-records.db` と `waste-records.key` はコミットしない。

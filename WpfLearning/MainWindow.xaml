@@ -1,0 +1,137 @@
+<Window x:Class="WpfLearning.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:WpfLearning.ViewModels"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance Type=vm:MainViewModel, IsDesignTimeCreatable=False}"
+        Title="産業廃棄物 収集記録（WPF 学習）"
+        Language="ja-JP"
+        FontFamily="Yu Gothic UI"
+        Foreground="{StaticResource TextBrush}"
+        Background="{StaticResource PageBrush}"
+        Width="1100"
+        Height="740"
+        MinWidth="920"
+        MinHeight="600"
+        WindowStartupLocation="CenterScreen"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Display">
+    <Window.InputBindings>
+        <KeyBinding Key="Escape" Command="{Binding CloseEnlargedCommand}"/>
+    </Window.InputBindings>
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="248"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.RowSpan="3" Background="{StaticResource SidebarBrush}">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Margin="20,22,20,18">
+                    <TextBlock Text="産業廃棄物" Foreground="#93C5BD" FontSize="12"/>
+                    <TextBlock Text="収集記録" Foreground="White" FontSize="22" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                    <TextBlock Text="WPF 学習用" Foreground="#D1DDE4" FontSize="12" Margin="0,4,0,0"/>
+                </StackPanel>
+                <TextBlock DockPanel.Dock="Bottom"
+                           Margin="20"
+                           TextWrapping="Wrap"
+                           Foreground="#B7C6D0"
+                           FontSize="12"
+                           LineHeight="18"
+                           Text="左の選択で CurrentViewModel を入れ替えています。表示する UserControl は、ViewModel の型に対応する DataTemplate で決まります。"/>
+                <StackPanel Margin="12,8,12,0">
+                    <RadioButton Content="一覧"
+                                 GroupName="MainNavigation"
+                                 Style="{StaticResource NavButton}"
+                                 IsChecked="{Binding IsListSelected, Mode=TwoWay}"/>
+                    <RadioButton Content="新規登録"
+                                 GroupName="MainNavigation"
+                                 Style="{StaticResource NavButton}"
+                                 IsChecked="{Binding IsRegisterSelected, Mode=TwoWay}"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <Border Grid.Column="1"
+                Padding="28,16"
+                Background="White"
+                BorderBrush="{StaticResource CardBorderBrush}"
+                BorderThickness="0,0,0,1">
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="{Binding CurrentViewModel.Title}"
+                           FontSize="22"
+                           FontWeight="SemiBold"/>
+                <TextBlock Text="{Binding CurrentViewModel.Description}"
+                           Margin="0,4,0,0"
+                           TextWrapping="Wrap"
+                           Foreground="{StaticResource MutedTextBrush}"/>
+            </StackPanel>
+        </Border>
+
+        <!-- ここに一覧か登録画面が入る。中身の ViewModel が DataContext になる。 -->
+        <ContentControl Grid.Column="1"
+                        Grid.Row="1"
+                        Margin="28,20"
+                        Content="{Binding CurrentViewModel}"/>
+
+        <Border Grid.Column="1" Grid.Row="2" Padding="28,8" Background="#E7EEF2">
+            <DockPanel LastChildFill="True">
+                <TextBlock DockPanel.Dock="Right"
+                           MaxWidth="460"
+                           Margin="16,0,0,0"
+                           VerticalAlignment="Center"
+                           Foreground="{StaticResource MutedTextBrush}"
+                           FontSize="12"
+                           TextTrimming="CharacterEllipsis"
+                           ToolTip="{Binding StorePath}"
+                           Text="{Binding StorePath, StringFormat=保存先 {0}}"/>
+                <TextBlock VerticalAlignment="Center"
+                           FontSize="12"
+                           Text="{Binding StatusText}"/>
+            </DockPanel>
+        </Border>
+
+        <Grid Grid.RowSpan="3" Grid.ColumnSpan="2" Panel.ZIndex="10">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Setter Property="Visibility" Value="Visible"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding EnlargedImage}" Value="{x:Null}">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+            <Button Command="{Binding CloseEnlargedCommand}" Cursor="Hand">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="#E6111827"/>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+            <Image Margin="72,40"
+                   Source="{Binding EnlargedImage}"
+                   Stretch="Uniform"
+                   IsHitTestVisible="False"/>
+            <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Margin="24">
+                <Button HorizontalAlignment="Right"
+                        Content="閉じる"
+                        Command="{Binding CloseEnlargedCommand}"
+                        Style="{StaticResource SecondaryButton}"/>
+                <TextBlock Margin="0,8,0,0"
+                           HorizontalAlignment="Right"
+                           Foreground="White"
+                           FontSize="13"
+                           Text="{Binding EnlargedSizeText}"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

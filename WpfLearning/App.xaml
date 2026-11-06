@@ -1,0 +1,23 @@
+<Application x:Class="WpfLearning.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:WpfLearning.ViewModels"
+             xmlns:views="clr-namespace:WpfLearning.Views">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Themes/AppStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <!--
+              画面の対応表。ContentControl の中身がこの型になると、右側の UserControl が作られる。
+            -->
+            <DataTemplate DataType="{x:Type vm:WasteListViewModel}">
+                <views:WasteListView/>
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:WasteRegisterViewModel}">
+                <views:WasteRegisterView/>
+            </DataTemplate>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
