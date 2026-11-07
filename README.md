@@ -56,6 +56,19 @@ GitHub でリリースを公開すると、GitHub Actions がそのコミット�
 
 起動中のウィンドウ最下部の「保存先」にも、データベースのパスが出ます。
 
+## アンインストール
+
+このアプリは PC へインストールしません。レジストリ登録や「アプリのアンインストール」画面はありません。次の 2 つを削除すれば完了です。
+
+1. 置いてある `WpfLearning.exe` を削除する（起動中なら先に終了する）
+2. ユーザーデータ `%LOCALAPPDATA%\WpfLearning` をフォルダごと削除する
+
+エクスプローラーのアドレスバーに `%LOCALAPPDATA%\WpfLearning` を貼り付けて開いても構いません。PowerShell なら次でも同じです。
+
+```powershell
+Remove-Item -Recurse -Force "$env:LOCALAPPDATA\WpfLearning"
+```
+
 ## 暗号化
 
 データベースファイル自体を SQLCipher で暗号化しています。メモ帳などで開いても、登録した内容は読めません。
