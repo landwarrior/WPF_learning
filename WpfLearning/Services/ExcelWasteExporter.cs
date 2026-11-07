@@ -3,6 +3,7 @@ using System.IO.Compression;
 using System.Text;
 using System.Text.RegularExpressions;
 using ClosedXML.Excel;
+using ClosedXML.Excel.Drawings;
 using WpfLearning.Models;
 
 namespace WpfLearning.Services;
@@ -10,10 +11,17 @@ namespace WpfLearning.Services;
 /// <summary>
 /// 収集記録を Excel（.xlsx）へ書き出す。1 件につき 1 シート。
 /// 登録画面のカード＋入力欄に近いフォーム配置で、フォントはメイリオ。
+/// 添付 JPEG はシート内に縮小して埋め込む。
 /// </summary>
 public static class ExcelWasteExporter
 {
     private const string FontName = "メイリオ";
+
+    /// <summary>画像の表示幅上限（ピクセル）。カード内の列幅に収める。</summary>
+    private const int MaxImageWidthPx = 420;
+
+    /// <summary>Excel の行の高さ上限（ポイント）。これを超える画像は複数行にまたがせる。</summary>
+    private const double MaxRowHeightPoints = 409;
 
     private static readonly XLColor PageFill = XLColor.FromHtml("#F3F5F7");
     private static readonly XLColor CardFill = XLColor.White;
@@ -24,37 +32,51 @@ public static class ExcelWasteExporter
 
     /// <summary>チェックされた記録を、それぞれ別シートへ書き出して保存する。</summary>
     /// <param name="path">保存先の .xlsx パス。</param>
-    /// <param name="records">出力する記録。並びはこの順でシートになる。</param>
+    /// <param name="records">出力する記録。並びはこの順でシートになる。<see cref="WasteRecord.Images"/> に JPEG があれば埋め込む。</param>
     public static void Export(string path, IReadOnlyList<WasteRecord> records)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         if (records.Count == 0)
             throw new ArgumentException("出力する記録がありません。", nameof(records));
 
-        using var workbook = new XLWorkbook();
-        workbook.Style.Font.FontName = FontName;
-        workbook.Style.Font.FontSize = 11;
-
-        var usedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        // ClosedXML 0.105 の空ブックにはシートが無いので、記録ごとに Add する。
-        for (var i = 0; i < records.Count; i++)
+        // AddPicture がストリームを参照し続ける場合に備え、保存後にまとめて破棄する。
+        var imageStreams = new List<MemoryStream>();
+        try
         {
-            var record = records[i];
-            var sheet = workbook.Worksheets.Add(CreateSheetName(record, i + 1, usedNames));
-            WriteRecord(sheet, record);
-        }
+            using var workbook = new XLWorkbook();
+            workbook.Style.Font.FontName = FontName;
+            workbook.Style.Font.FontSize = 11;
 
-        workbook.SaveAs(path);
-        // styles / テーマに残る Calibri・ＭＳ Ｐゴシックをメイリオへ揃える。
-        ForceMeiryoFonts(path);
+            var usedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            // ClosedXML 0.105 の空ブックにはシートが無いので、記録ごとに Add する。
+            for (var i = 0; i < records.Count; i++)
+            {
+                var record = records[i];
+                var sheet = workbook.Worksheets.Add(CreateSheetName(record, i + 1, usedNames));
+                WriteRecord(sheet, record, imageStreams);
+            }
+
+            workbook.SaveAs(path);
+            // styles / テーマに残る Calibri・ＭＳ Ｐゴシックをメイリオへ揃える。
+            ForceMeiryoFonts(path);
+        }
+        finally
+        {
+            foreach (var stream in imageStreams)
+                stream.Dispose();
+        }
     }
 
     /// <summary>
     /// 登録画面と同じ並びで 1 件を書き込む。
     /// 外側にカード枠、各入力は枠線付き。収集日とマニフェスト、数量と単位は横並び。
+    /// 添付画像があれば枚数の下へ埋め込む。
     /// </summary>
-    private static void WriteRecord(IXLWorksheet sheet, WasteRecord record)
+    private static void WriteRecord(
+        IXLWorksheet sheet,
+        WasteRecord record,
+        List<MemoryStream> imageStreams)
     {
         // 余白列と、横並び項目のあいだのすき間を取る。
         sheet.Column(1).Width = 3;
@@ -72,9 +94,10 @@ public static class ExcelWasteExporter
         const int cardTop = 2;
         const int cardLeft = 1;
         const int cardRight = 7;
-        // 先にカード内を白く塗ってから入力欄を置く（あとから全体へ Fill すると枠線が消える）。
-        sheet.Range(cardTop, cardLeft, cardTop + 40, cardRight).Style.Fill.BackgroundColor = CardFill;
-        sheet.Range(cardTop, cardLeft, cardTop + 40, cardRight).Style.Font.FontName = FontName;
+        // 画像枚数で伸びうるので、あとからカード範囲を白く塗る。仮に多めの行を確保する。
+        const int provisionalCardRows = 80;
+        sheet.Range(cardTop, cardLeft, cardTop + provisionalCardRows, cardRight).Style.Fill.BackgroundColor = CardFill;
+        sheet.Range(cardTop, cardLeft, cardTop + provisionalCardRows, cardRight).Style.Font.FontName = FontName;
 
         var row = cardTop + 1;
 
@@ -131,11 +154,13 @@ public static class ExcelWasteExporter
         sheet.Cell(row, 2).Style.Alignment.Vertical = XLAlignmentVerticalValues.Top;
         row += 2;
 
-        // 画像
+        // 画像（枚数＋本体）
         WriteLabel(sheet, row, 2, "画像");
         row++;
-        WriteField(sheet, row, 2, 6, $"{record.ImageCount} 枚");
+        var imageCount = record.Images.Count > 0 ? record.Images.Count : record.ImageCount;
+        WriteField(sheet, row, 2, 6, $"{imageCount} 枚");
         row += 2;
+        row = EmbedImages(sheet, row, record.Images, imageStreams);
 
         // 登録日時
         WriteLabel(sheet, row, 2, "登録日時");
@@ -144,6 +169,15 @@ public static class ExcelWasteExporter
         row++;
 
         var cardBottom = row;
+        // 画像で仮塗りより長くなった分も白くする。
+        if (cardBottom > cardTop + provisionalCardRows)
+        {
+            sheet.Range(cardTop + provisionalCardRows + 1, cardLeft, cardBottom, cardRight)
+                .Style.Fill.BackgroundColor = CardFill;
+            sheet.Range(cardTop + provisionalCardRows + 1, cardLeft, cardBottom, cardRight)
+                .Style.Font.FontName = FontName;
+        }
+
         var card = sheet.Range(cardTop, cardLeft, cardBottom, cardRight);
         card.Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
         card.Style.Border.OutsideBorderColor = CardBorder;
@@ -152,8 +186,56 @@ public static class ExcelWasteExporter
         sheet.Row(cardBottom).Height = 12;
 
         // カード下の仮塗りをページ色へ戻す。
-        if (cardBottom < cardTop + 40)
-            sheet.Range(cardBottom + 1, cardLeft, cardTop + 40, cardRight).Style.Fill.BackgroundColor = PageFill;
+        if (cardBottom < cardTop + provisionalCardRows)
+            sheet.Range(cardBottom + 1, cardLeft, cardTop + provisionalCardRows, cardRight)
+                .Style.Fill.BackgroundColor = PageFill;
+    }
+
+    /// <summary>
+    /// 添付 JPEG をシートへ埋め込み、次に書く行番号を返す。
+    /// 幅がカード内に収まるよう縮小し、高さに応じて行を確保する。
+    /// </summary>
+    private static int EmbedImages(
+        IXLWorksheet sheet,
+        int startRow,
+        IReadOnlyList<RecordImage> images,
+        List<MemoryStream> imageStreams)
+    {
+        if (images.Count == 0)
+            return startRow;
+
+        var row = startRow;
+        foreach (var image in images)
+        {
+            if (image.Jpeg.Length == 0)
+                continue;
+
+            var stream = new MemoryStream(image.Jpeg, writable: false);
+            imageStreams.Add(stream);
+
+            var picture = sheet
+                .AddPicture(stream, XLPictureFormat.Jpeg)
+                .MoveTo(sheet.Cell(row, 2));
+
+            if (picture.Width > MaxImageWidthPx)
+                picture.Scale((double)MaxImageWidthPx / picture.Width);
+
+            // ピクセル→ポイント（96 DPI 想定）。Excel の行高さ上限を超えないよう分割する。
+            var heightPoints = Math.Max(24, picture.Height * 0.75) + 8;
+            var remaining = heightPoints;
+            while (remaining > 0)
+            {
+                var thisHeight = Math.Min(remaining, MaxRowHeightPoints);
+                sheet.Row(row).Height = thisHeight;
+                sheet.Range(row, 2, row, 6).Style.Fill.BackgroundColor = CardFill;
+                remaining -= thisHeight;
+                row++;
+            }
+
+            row++; // 画像どうしのすき間
+        }
+
+        return row;
     }
 
     /// <summary>入力欄の上に置くラベル。</summary>

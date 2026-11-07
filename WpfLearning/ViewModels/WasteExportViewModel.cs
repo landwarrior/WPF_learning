@@ -34,7 +34,7 @@ public sealed class WasteExportViewModel : PageViewModel
 
     /// <inheritdoc />
     public override string Description =>
-        "出力する記録にチェックを付けます。複数選んだときは、Excel のシートを記録ごとに分けます。";
+        "出力する記録にチェックを付けます。複数選んだときは、Excel のシートを記録ごとに分けます。添付画像もシートへ埋め込みます。";
 
     /// <summary>表に出す記録。各行にチェック状態を持つ。</summary>
     public ObservableCollection<ExportRecordItem> Items { get; } = new();
@@ -110,6 +110,9 @@ public sealed class WasteExportViewModel : PageViewModel
 
         try
         {
+            foreach (var record in selected)
+                record.Images = _store.LoadImages(record.Id);
+
             ExcelWasteExporter.Export(dialog.FileName, selected);
             _reportStatus($"{selected.Count} 件を Excel へ出力しました。");
             MessageBox.Show(
