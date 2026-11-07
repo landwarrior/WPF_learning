@@ -1,0 +1,87 @@
+<UserControl x:Class="WpfLearning.Views.WasteExportView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:WpfLearning.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:WasteExportViewModel, IsDesignTimeCreatable=False}">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <DockPanel Margin="0,0,0,12">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <Button Content="すべて選択"
+                        Command="{Binding SelectAllCommand}"
+                        Style="{StaticResource SecondaryButton}"/>
+                <Button Margin="8,0,0,0"
+                        Content="選択を解除"
+                        Command="{Binding ClearSelectionCommand}"
+                        Style="{StaticResource SecondaryButton}"/>
+                <Button Margin="8,0,0,0"
+                        Content="再読込"
+                        Command="{Binding ReloadCommand}"
+                        Style="{StaticResource SecondaryButton}"/>
+            </StackPanel>
+            <TextBlock VerticalAlignment="Center"
+                       Foreground="{StaticResource MutedTextBrush}"
+                       Text="{Binding SelectionSummaryText}"/>
+        </DockPanel>
+
+        <!-- 共通スタイルは IsReadOnly=True なので、チェック列を TwoWay バインドできるよう外す。 -->
+        <DataGrid Grid.Row="1"
+                  ItemsSource="{Binding Items}"
+                  IsReadOnly="False">
+            <DataGrid.Columns>
+                <DataGridTemplateColumn Header="選択" Width="60">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <CheckBox HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="収集日"
+                                    Width="110"
+                                    Binding="{Binding Record.CollectedOn, StringFormat=yyyy/MM/dd}"
+                                    IsReadOnly="True"/>
+                <DataGridTextColumn Header="マニフェスト番号"
+                                    Width="140"
+                                    Binding="{Binding Record.ManifestNumber}"
+                                    IsReadOnly="True"/>
+                <DataGridTextColumn Header="排出事業者"
+                                    Width="*"
+                                    Binding="{Binding Record.GeneratorName}"
+                                    IsReadOnly="True"/>
+                <DataGridTextColumn Header="廃棄物の種類"
+                                    Width="180"
+                                    Binding="{Binding Record.WasteName}"
+                                    IsReadOnly="True"/>
+                <DataGridTextColumn Header="数量"
+                                    Width="100"
+                                    Binding="{Binding Record.QuantityDisplay}"
+                                    IsReadOnly="True"/>
+                <DataGridTextColumn Header="処分方法"
+                                    Width="100"
+                                    Binding="{Binding Record.DisposalMethod}"
+                                    IsReadOnly="True"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <DockPanel Grid.Row="2" Margin="0,16,0,0">
+            <Button DockPanel.Dock="Right"
+                    Content="チェックした記録を Excel へ出力"
+                    Command="{Binding ExportCommand}"
+                    Style="{StaticResource PrimaryButton}"/>
+            <TextBlock VerticalAlignment="Center"
+                       Foreground="{StaticResource MutedTextBrush}"
+                       TextWrapping="Wrap"
+                       Text="保存先を選ぶと .xlsx を作ります。選んだ件数ぶんのシートができます。"/>
+        </DockPanel>
+    </Grid>
+</UserControl>

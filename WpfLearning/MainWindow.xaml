@@ -56,6 +56,10 @@
                                  GroupName="MainNavigation"
                                  Style="{StaticResource NavButton}"
                                  IsChecked="{Binding IsRegisterSelected, Mode=TwoWay}"/>
+                    <RadioButton Content="Excel 出力"
+                                 GroupName="MainNavigation"
+                                 Style="{StaticResource NavButton}"
+                                 IsChecked="{Binding IsExportSelected, Mode=TwoWay}"/>
                 </StackPanel>
             </DockPanel>
         </Border>
