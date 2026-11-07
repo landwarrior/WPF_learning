@@ -18,6 +18,9 @@
             <DataTemplate DataType="{x:Type vm:WasteRegisterViewModel}">
                 <views:WasteRegisterView/>
             </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:WasteExportViewModel}">
+                <views:WasteExportView/>
+            </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

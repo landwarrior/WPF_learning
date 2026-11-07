@@ -14,7 +14,7 @@ public sealed class MainViewModel : ViewModelBase
     private string _statusText = "";
     private BitmapSource? _enlargedImage;
 
-    /// <summary>一覧と登録を同じ保存先でつなぎ、最初は一覧を出す。</summary>
+    /// <summary>一覧・登録・Excel 出力を同じ保存先でつなぎ、最初は一覧を出す。</summary>
     /// <param name="store">記録の読み書きに使う保存先。</param>
     public MainViewModel(SqliteWasteStore store)
     {
@@ -22,6 +22,7 @@ public sealed class MainViewModel : ViewModelBase
         CloseEnlargedCommand = new RelayCommand(CloseEnlarged);
         List = new WasteListViewModel(store, SetStatus, BeginEdit, ShowEnlarged);
         Register = new WasteRegisterViewModel(store, OnSaved, SetStatus, ShowEnlarged);
+        Export = new WasteExportViewModel(store, SetStatus);
         _current = List;
     }
 
@@ -30,6 +31,9 @@ public sealed class MainViewModel : ViewModelBase
 
     /// <summary>登録と編集の画面。アプリの生存中は同じインスタンスを使う。</summary>
     public WasteRegisterViewModel Register { get; }
+
+    /// <summary>Excel 出力画面。アプリの生存中は同じインスタンスを使う。</summary>
+    public WasteExportViewModel Export { get; }
 
     /// <summary>データベースファイルの絶対パス。ステータスバーの保存先に出す。</summary>
     public string StorePath { get; }
@@ -52,6 +56,7 @@ public sealed class MainViewModel : ViewModelBase
 
             OnPropertyChanged(nameof(IsListSelected));
             OnPropertyChanged(nameof(IsRegisterSelected));
+            OnPropertyChanged(nameof(IsExportSelected));
         }
     }
 
@@ -83,6 +88,23 @@ public sealed class MainViewModel : ViewModelBase
                 Register.BeginNew();
 
             CurrentViewModel = Register;
+        }
+    }
+
+    /// <summary>
+    /// 左メニューの「Excel 出力」が選ばれているか。
+    /// 開くたびに一覧を読み直し、最新の記録を選べるようにする。
+    /// </summary>
+    public bool IsExportSelected
+    {
+        get => ReferenceEquals(CurrentViewModel, Export);
+        set
+        {
+            if (!value)
+                return;
+
+            Export.Reload();
+            CurrentViewModel = Export;
         }
     }
 
@@ -122,13 +144,14 @@ public sealed class MainViewModel : ViewModelBase
         CurrentViewModel = Register;
     }
 
-    /// <summary>保存が終わったら一覧へ戻り、保存した行を選択し直す。</summary>
+    /// <summary>保存が終わったら一覧へ戻り、保存した行を選択し直す。Excel 出力用の一覧も更新する。</summary>
     /// <param name="record">保存した記録。選択の復元に Id を使う。</param>
     /// <param name="isUpdate">既存行の更新なら true。新規登録なら false。</param>
     private void OnSaved(WasteRecord record, bool isUpdate)
     {
         CurrentViewModel = List;
         List.Reload(record.Id);
+        Export.Reload();
         StatusText = isUpdate
             ? $"「{record.GeneratorName} / {record.WasteName}」の変更を保存しました。"
             : $"「{record.GeneratorName} / {record.WasteName}」を登録しました。";
